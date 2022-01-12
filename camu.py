@@ -74,15 +74,18 @@ class camera:
         '''
         return self.intrinsics() @ self.extrinsics()
 
-    def rays(self):
+    def rays(self, random_radius=0):
         '''Create a block of rays at world space from one camera
+        :param random_radius: add random noise of random_radius to each pixel position 
         :return: array of ray origins and ray directions
         '''
         tx = np.linspace(0.5, self.img_w - 0.5, self.img_w)
         ty = np.linspace(0.5, self.img_h - 0.5, self.img_h)
         pixels_x, pixels_y = np.meshgrid(tx, ty)
 
-        p = np.stack([pixels_x, pixels_y, np.ones_like(pixels_y)], axis=-1) # W, H, 3
+        r = (np.random.random_sample((self.img_w, self.img_h, 2)) - 0.5) * random_radius # W, H, 2
+        r = np.concatenate([r, np.zeros_like(pixels_y)[..., np.newaxis]], axis=-1) # W, H, 3
+        p = np.stack([pixels_x, pixels_y, np.ones_like(pixels_y)], axis=-1) + r # W, H, 3
         p = np.matmul(scipy.linalg.inv(self.K)[None, None, :3, :3], p[:, :, :, None]).squeeze()  # W, H, 3
 
         pose = self.c2w
